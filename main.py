@@ -52,16 +52,19 @@ current_price = df.iloc[-time_steps:][['closing_price', 'volume', 'mva_30']]
 current_price = scaler.transform(current_price)
 current_price = np.reshape(current_price, (1, time_steps, num_features))
 for i in range(30):
+    next_price = model.predict(current_price)
     next_price = scaler.inverse_transform(next_price)
-    future_prices.append(scaler.inverse_transform(next_price)[0][0][0])
-    current_price = np.append(current_price[:,1:,:], [[next_price[0][0], current_price[0][-1][1], current_price[0][-1][2]]], axis=1)
+    future_prices.append(next_price.reshape(-1, 1)[0][0])
+    current_price = np.delete(current_price, 0, axis=1)
+    current_price = np.append(current_price, [[next_price[0][0], df.iloc[-time_steps+i+1]['volume'], 
+    df.iloc[-time_steps+i+1]['mva_30']]], axis=1)
+    current_price = np.reshape(current_price, (1, time_steps, num_features))
 
 future_prices = np.array(future_prices).reshape(-1,1)
-print(future_prices)
 
 # Plot
-last_60_days = df.iloc[-60:]['closing_price']
-future_prices = scaler.inverse_transform(future_prices.reshape(-1,1))
+last_60_days = df.iloc[-60:]['closing_price'] # get the last 60 days closing prices
+future_prices = scaler.inverse_transform(future_prices) # inverse transform the future prices to get the original scale
 plt.plot(last_60_days, label='Last 60 Days', color='blue')
 plt.plot(range(60, 90), future_prices, label='Future Prices', color='red')
 plt.xlabel('Days')
